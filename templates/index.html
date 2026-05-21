@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Food Classification · Vihara Tech</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:wght@300;400;500&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════
+   DESIGN SYSTEM  —  Green / Pink / Obsidian
+   Aesthetic: precision scientific instrument UI
+═══════════════════════════════════════════════ */
+:root {
+  --void:      #050810;
+  --deep:      #080d18;
+  --surface:   #0c1220;
+  --card:      #101928;
+  --card2:     #131f30;
+  --border:    #1e2f48;
+  --border2:   #253a58;
+
+  /* ── PRIMARY: Green ── */
+  --primary:      #00e87a;
+  --primary2:     #00c466;
+  --primary-dim:  #006635;
+
+  /* ── ACCENT: Pink ── */
+  --accent:       #ff4fa3;
+  --accent2:      #e0358a;
+  --accent-dim:   #7a1a4a;
+
+  /* ── semantic helpers (kept for metric colours) ── */
+  --amber:     #f5a623;
+  --green:     #00e87a;   /* = --primary */
+  --rose:      #ff4f6e;
+
+  --text:      #d6e8f5;
+  --text2:     #8fadc8;
+  --muted:     #4a6680;
+  --r:         10px;
+  --r2:        6px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Nunito Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -5%, rgba(0,232,122,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, #050810 0%, #07101e 100%);
+}
+
+/* scan-line texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,232,122,0.012) 2px,
+    rgba(0,232,122,0.012) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+header {
+  position: relative;
+  text-align: center;
+  padding: 2.4rem 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+}
+
+.header-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 4px;
+  color: var(--primary);
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+}
+.header-badge::before,
+.header-badge::after {
+  content: '';
+  display: inline-block;
+  width: 30px; height: 1px;
+  background: var(--primary-dim);
+}
+
+.site-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 4vw, 2.9rem);
+  letter-spacing: 3px;
+  line-height: 1.15;
+  color: var(--text);
+  text-shadow: 0 0 60px rgba(0,232,122,0.2);
+}
+.site-title em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.site-org {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: clamp(0.65rem, 1.2vw, 0.8rem);
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin-top: 0.65rem;
+}
+.site-org span { color: var(--primary2); }
+
+.header-decor {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.header-decor::before {
+  content: '';
+  position: absolute;
+  top: -60%; left: -10%;
+  width: 120%; height: 200%;
+  background: radial-gradient(ellipse 50% 60% at 50% 0%, rgba(0,232,122,0.06) 0%, transparent 70%);
+}
+
+/* corner brackets — alternate green / pink */
+.bracket {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-style: solid;
+  opacity: 0.7;
+}
+.bracket.tl { top: 14px; left: 18px;  border-color: var(--primary-dim); border-width: 2px 0 0 2px; }
+.bracket.tr { top: 14px; right: 18px; border-color: var(--accent-dim);  border-width: 2px 2px 0 0; }
+.bracket.bl { bottom: 14px; left: 18px;  border-color: var(--accent-dim);  border-width: 0 0 2px 2px; }
+.bracket.br { bottom: 14px; right: 18px; border-color: var(--primary-dim); border-width: 0 2px 2px 0; }
+
+/* ═══════════════════════════════════════════════
+   MAIN LAYOUT  —  three columns
+═══════════════════════════════════════════════ */
+.layout {
+  display: grid;
+  grid-template-columns: 230px 1fr 270px;
+  gap: 1rem;
+  max-width: 1460px;
+  margin: 1.2rem auto;
+  padding: 0 1rem 3rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   SHARED CARD
+═══════════════════════════════════════════════ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1.4rem 1.2rem;
+  position: relative;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 24px; right: 24px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,232,122,0.18), transparent);
+}
+
+.section-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+  color: var(--primary2);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.section-title .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════
+   LEFT SIDEBAR
+═══════════════════════════════════════════════ */
+.left-col { display: flex; flex-direction: column; gap: 1rem; }
+.left-col .card { height: fit-content; position: sticky; top: 1rem; }
+
+.profile-photo-wrap {
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  margin: 0 auto 1.2rem;
+  background: conic-gradient(var(--primary), var(--accent), #cc44ff, var(--primary));
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 28px rgba(0,232,122,0.2);
+}
+.profile-photo {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  background: var(--deep);
+}
+
+.dev-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+  letter-spacing: 2px;
+  line-height: 1.35;
+  text-shadow: 0 0 20px rgba(0,232,122,0.12);
+}
+.dev-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.67rem;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-align: center;
+  margin-top: 0.45rem;
+}
+
+.sep { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+.stat-table { width: 100%; }
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.42rem 0;
+  border-bottom: 1px solid rgba(30,47,72,0.7);
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-k { font-size: 0.73rem; color: var(--text2); font-family: 'Nunito Sans', sans-serif; }
+.stat-v { font-family: 'IBM Plex Mono', monospace; font-size: 0.73rem; color: var(--accent); }
+
+/* ═══════════════════════════════════════════════
+   CENTER
+═══════════════════════════════════════════════ */
+.center-col { display: flex; flex-direction: column; gap: 1rem; }
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--r);
+  padding: 2.8rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s;
+  position: relative;
+  overflow: hidden;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.upload-zone:hover,
+.upload-zone.drag-over {
+  border-color: var(--primary);
+  background: rgba(0,232,122,0.03);
+}
+.upload-zone input[type="file"]
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer; z-index: 2;
+}
+
+.upload-watermark {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; z-index: 0; padding: 1rem;
+}
+.watermark-text {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(0.55rem, 1.5vw, 0.9rem);
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,79,163,0.06);
+  text-align: center;
+  line-height: 2;
+  user-select: none;
+}
+
+.upload-fg {
+  position: relative; z-index: 1; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+}
+.upload-icon-wrap {
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  background: rgba(0,232,122,0.08);
+  border: 1px solid rgba(0,232,122,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 0.3rem;
+  transition: box-shadow 0.25s;
+}
+.upload-zone:hover .upload-icon-wrap {
+  box-shadow: 0 0 20px rgba(0,232,122,0.25);
+}
+.upload-hint { font-size: 0.82rem; color: var(--text2); line-height: 1.5; }
+.upload-hint strong { color: var(--primary); }
+
+#preview-wrap { display: none; margin-top: 1rem; text-align: center; }
+#preview-img {
+  max-height: 240px; max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  box-shadow: 0 0 30px rgba(255,79,163,0.1);
+}
+#file-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem; color: var(--muted); margin-top: 0.5rem;
+}
+
+/* ── Model selection ── */
+.model-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.model-btn {
+  background: var(--deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 1rem 0.5rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  color: var(--text2);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+}
+.model-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transform: scaleX(0);
+  transition: transform 0.2s;
+}
+.model-btn:hover {
+  border-color: var(--primary-dim);
+  color: var(--primary);
+  background: rgba(0,232,122,0.04);
+}
+.model-btn.active {
+  border-color: var(--primary);
+  background: rgba(0,232,122,0.08);
+  color: var(--primary);
+  box-shadow: 0 0 18px rgba(0,232,122,0.15);
+}
+.model-btn.active::after { transform: scaleX(1); }
+.model-icon { display: block; font-size: 1.6rem; margin-bottom: 0.4rem; }
+.model-arch { font-size: 0.6rem; color: var(--muted); margin-top: 0.25rem; letter-spacing: 1px; }
+
+/* ── Predict button ── */
+#predict-btn {
+  width: 100%;
+  padding: 1.05rem;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--primary-dim), var(--primary), var(--accent2), var(--accent));
+  color: var(--void);
+  border: none;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 4px 24px rgba(0,232,122,0.25), 0 4px 24px rgba(255,79,163,0.15);
+  position: relative;
+  overflow: hidden;
+}
+#predict-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+}
+#predict-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 36px rgba(0,232,122,0.35), 0 8px 36px rgba(255,79,163,0.25);
+}
+#predict-btn:active:not(:disabled) { transform: translateY(0); }
+#predict-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+.btn-spinner {
+  display: none; width: 18px; height: 18px;
+  border: 2px solid rgba(5,8,16,0.3);
+  border-top-color: var(--void);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto;
+}
+.btn-spinner.show { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Error ── */
+.error-msg {
+  background: rgba(255,79,163,0.08);
+  border: 1px solid rgba(255,79,163,0.3);
+  border-radius: var(--r2);
+  padding: 0.85rem 1rem;
+  color: #ff8fb8;
+  font-size: 0.8rem;
+  margin-top: 0.8rem;
+  display: none;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── Result panel ── */
+#result-panel { display: none; }
+
+.result-food-name {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  letter-spacing: 2px;
+  color: var(--primary);
+  line-height: 1.1;
+  text-shadow: 0 0 40px rgba(0,232,122,0.3);
+}
+.result-model-badge {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  padding: 0.2rem 0.7rem;
+  border-radius: 3px;
+  background: rgba(255,79,163,0.1);
+  border: 1px solid rgba(255,79,163,0.3);
+  color: var(--accent);
+  margin-top: 0.5rem;
+}
+
+/* confidence bar */
+.conf-wrap { margin-top: 1.1rem; }
+.conf-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.73rem; color: var(--text2); margin-bottom: 0.35rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.conf-track { height: 5px; background: var(--border); border-radius: 50px; overflow: hidden; }
+.conf-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 50px;
+  transition: width 0.9s cubic-bezier(0.16,1,0.3,1);
+  width: 0%;
+}
+
+/* ── Metrics grid ── */
+.metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; margin-top: 0.5rem; }
+.metric-cell {
+  background: var(--deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 0.85rem 0.8rem;
+  text-align: center;
+  transition: border-color 0.2s;
+  position: relative; overflow: hidden;
+}
+.metric-cell::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  opacity: 0.5;
+}
+.metric-cell:hover { border-color: var(--primary-dim); }
+.metric-val {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700; font-size: 1.3rem; letter-spacing: 1px;
+  color: var(--accent);
+}
+.metric-val.high { color: var(--primary); }
+.metric-val.med  { color: var(--amber); }
+.metric-val.low  { color: var(--rose); }
+.metric-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); margin-top: 0.25rem;
+}
+
+/* ── Top-5 ── */
+.top5-list { margin-top: 0.5rem; }
+.top5-row {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.48rem 0;
+  border-bottom: 1px solid rgba(30,47,72,0.6);
+}
+.top5-row:last-child { border-bottom: none; }
+.t5-rank { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--muted); width: 16px; text-align: right; }
+.t5-name { flex: 1; font-size: 0.82rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t5-bar-wrap { flex: 0 0 70px; }
+.t5-bar { height: 3px; background: var(--border); border-radius: 50px; overflow: hidden; }
+.t5-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  border-radius: 50px;
+}
+.t5-pct { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--accent); width: 42px; text-align: right; }
+
+/* ═══════════════════════════════════════════════
+   RIGHT SIDEBAR
+═══════════════════════════════════════════════ */
+.right-col { display: flex; flex-direction: column; gap: 1rem; }
+.right-col .card { height: fit-content; }
+
+/* Nutrition */
+#nut-panel { display: none; }
+
+.nut-header-food {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.75rem; font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 1.5px; margin-bottom: 0.8rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.nut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+.nut-tile {
+  background: var(--deep);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 0.8rem 0.6rem; text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.nut-tile:hover {
+  border-color: var(--primary-dim);
+  box-shadow: 0 0 12px rgba(0,232,122,0.07);
+}
+.nut-tile.full { grid-column: span 2; }
+.nut-num { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1.35rem; letter-spacing: 1px; }
+.nut-num.cal  { color: var(--accent); }
+.nut-num.pro  { color: var(--primary); }
+.nut-num.carb { color: #a78bfa; }
+.nut-num.fat  { color: #ff6b6b; }
+.nut-num.fib  { color: var(--primary2); }
+.nut-name { font-size: 0.62rem; font-family: 'IBM Plex Mono', monospace; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 0.2rem; }
+.nut-unit { font-size: 0.58rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+.nut-placeholder { text-align: center; padding: 1.5rem 0.5rem; }
+.nut-placeholder .ph-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.4; }
+.nut-placeholder p { font-size: 0.75rem; color: var(--muted); line-height: 1.6; }
+
+/* Classes list */
+.classes-card { height: fit-content; max-height: 440px; display: flex; flex-direction: column; }
+.class-scroll {
+  overflow-y: auto; max-height: 370px; padding-right: 4px;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.class-scroll::-webkit-scrollbar { width: 4px; }
+.class-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+.class-item {
+  font-size: 0.73rem; color: var(--text2);
+  padding: 0.32rem 0.55rem;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+  cursor: default;
+  transition: all 0.15s;
+  font-family: 'Nunito Sans', sans-serif;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.class-item::before {
+  content: '';
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--border2); flex-shrink: 0; transition: background 0.2s;
+}
+.class-item:hover {
+  background: rgba(0,232,122,0.04);
+  color: var(--text);
+  border-left-color: rgba(0,232,122,0.3);
+}
+.class-item.highlighted {
+  background: rgba(255,79,163,0.1);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.class-item.highlighted::before { background: var(--accent); }
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media (max-width: 1100px) { .layout { grid-template-columns: 200px 1fr 240px; } }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; grid-template-rows: auto; }
+  .left-col .card { position: static; }
+}
+
+/* pulse anim for dot */
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 6px var(--primary); }
+  50%       { box-shadow: 0 0 14px var(--primary), 0 0 24px rgba(0,232,122,0.35); }
+}
+.dot { animation: pulse-dot 2.4s ease-in-out infinite; }
+
+/* fade-in for result panel */
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeSlide 0.4s ease forwards; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════ -->
+<header>
+  <div class="header-decor">
+    <div class="bracket tl"></div>
+    <div class="bracket tr"></div>
+    <div class="bracket bl"></div>
+    <div class="bracket br"></div>
+  </div>
+
+  <div class="header-badge">
+    <span>Deep Learning</span>
+    ◆
+    <span>Computer Vision</span>
+  </div>
+
+  <div class="site-title">
+    FOOD <em>CLASSIFICATION</em><br>
+    USING DEEP LEARNING <em>CNN</em>
+  </div>
+
+  <div class="site-org">
+    <span>Vihara Tech</span>
+    &nbsp;·&nbsp;
+    The Skill Union
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════
+     LAYOUT
+═══════════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <aside class="left-col">
+    <div class="card">
+      <div class="profile-photo-wrap">
+        <img src="static/images/Nagalakshmi.jpeg" alt="Nagalakshmi Thota" class="profile-photo"/>
+      </div>
+      <div class="dev-name">Nagalakshmi<br>Thota</div>
+      <div class="dev-role">Data Scientist</div>
+
+      <hr class="sep"/>
+      <div class="section-title"><span class="dot"></span>Project Stats</div>
+      <div class="stat-table">
+        <div class="stat-row"><span class="stat-k">Food Classes</span><span class="stat-v">34</span></div>
+        <div class="stat-row"><span class="stat-k">Models</span><span class="stat-v">3</span></div>
+        <div class="stat-row"><span class="stat-k">CNN Input</span><span class="stat-v">256×256</span></div>
+        <div class="stat-row"><span class="stat-k">VGG / ResNet</span><span class="stat-v">224×224</span></div>
+        <div class="stat-row"><span class="stat-k">Backend</span><span class="stat-v">Flask</span></div>
+        <div class="stat-row"><span class="stat-k">Data Store</span><span class="stat-v">Redis</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── CENTER PANEL ── -->
+  <main class="center-col">
+
+    <!-- Upload -->
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Upload Food Image</div>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept="image/*"/>
+        <div class="upload-watermark">
+          <div class="watermark-text">
+            Only Upload Food Items<br>
+            of the Mentioned<br>
+            34 Classes
+          </div>
+        </div>
+        <div class="upload-fg">
+          <div class="upload-icon-wrap">🍽️</div>
+          <div class="upload-hint">
+            Drag &amp; drop or <strong>browse</strong> to upload<br>
+            <span style="font-size:0.72rem;color:var(--muted)">JPG · PNG · WEBP</span>
+          </div>
+        </div>
+      </div>
+      <div id="preview-wrap">
+        <img id="preview-img" src="" alt="Preview"/>
+        <div id="file-name"></div>
+      </div>
+    </div>
+
+    <!-- Model Select -->
+    <div class="card">
+      <div class="section-title"><span class="dot"></span>Select Model Architecture</div>
+      <div class="model-grid">
+        <button class="model-btn active" data-model="custom_cnn">
+          <span class="model-icon">🧠</span>
+          Custom CNN
+          <div class="model-arch">5 CONV BLOCKS</div>
+        </button>
+        <button class="model-btn" data-model="vgg16">
+          <span class="model-icon">🏗️</span>
+          VGG-16
+          <div class="model-arch">16 LAYERS</div>
+        </button>
+        <button class="model-btn" data-model="resnet50">
+          <span class="model-icon">🔗</span>
+          ResNet-50
+          <div class="model-arch">SKIP CONNECTIONS</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Predict -->
+    <div class="card">
+      <button id="predict-btn">
+        <span id="btn-text">⚡ PREDICT FOOD</span>
+        <div class="btn-spinner" id="btn-spinner"></div>
+      </button>
+      <div class="error-msg" id="error-msg"></div>
+    </div>
+
+    <!-- Result -->
+    <div class="card fade-in" id="result-panel">
+      <div class="section-title"><span class="dot"></span>Prediction Result</div>
+
+      <div class="result-food-name" id="result-label">—</div>
+      <div class="result-model-badge" id="result-model-tag"></div>
+
+      <div class="conf-wrap">
+        <div class="conf-labels">
+          <span>Confidence</span>
+          <span id="conf-pct">0%</span>
+        </div>
+        <div class="conf-track">
+          <div class="conf-fill" id="conf-bar"></div>
+        </div>
+      </div>
+
+      <!-- Inference Metrics -->
+      <hr class="sep" style="margin-top:1.2rem"/>
+      <div class="section-title" style="margin-bottom:0.6rem">
+        <span class="dot"></span>Inference Metrics
+      </div>
+      <div class="metrics-grid" id="metrics-grid">
+        <div class="metric-cell"><div class="metric-val" id="m-conf">—</div><div class="metric-label">Accuracy</div></div>
+        <div class="metric-cell"><div class="metric-val" id="m-prec">—</div><div class="metric-label">Precision</div></div>
+        <div class="metric-cell"><div class="metric-val" id="m-rec">—</div><div class="metric-label">Recall</div></div>
+        <div class="metric-cell"><div class="metric-val" id="m-f1">—</div><div class="metric-label">F1-Score</div></div>
+      </div>
+
+      <!-- Top-5 -->
+      <hr class="sep" style="margin-top:1.2rem"/>
+      <div class="section-title" style="margin-bottom:0.4rem">
+        <span class="dot"></span>Top 5 Predictions
+      </div>
+      <div class="top5-list" id="top5-list"></div>
+    </div>
+
+  </main>
+
+  <!-- ── RIGHT SIDEBAR ── -->
+  <aside class="right-col">
+
+    <!-- Nutrition -->
+    <div class="card" id="nut-panel">
+      <div class="section-title"><span class="dot"></span>Nutrition <span style="color:var(--muted);font-size:0.55rem;letter-spacing:1px">per 100 g · Redis</span></div>
+      <div class="nut-header-food" id="nut-food-name"></div>
+      <div id="nut-content"></div>
+    </div>
+
+    <!-- Classes -->
+    <div class="card classes-card">
+      <div class="section-title"><span class="dot"></span>34 Food Classes</div>
+      <div class="class-scroll">
+        <div class="class-list" id="class-list"></div>
+      </div>
+    </div>
+
+  </aside>
+
+</div><!-- .layout -->
+
+<!-- ═══════════════════════════════════════════════
+     SCRIPT
+═══════════════════════════════════════════════ -->
+<script>
+const LABELS = [
+  'butter_naan','pav_bhaji','Sandwich','chicken_curry','Hot Dog',
+  'cheesecake','sushi','chai','burger','ice_cream','kadai_paneer',
+  'Baked Potato','chapati','masala_dosa','dal_makhani','Donut',
+  'jalebi','fried_rice','chole_bhature','kulfi','kaathi_rolls',
+  'dhokla','Fries','omelette','pakode','momos','paani_puri',
+  'samosa','Taco','idli','Taquito','Crispy Chicken','pizza','apple_pie'
+];
+
+let selectedModel = 'custom_cnn';
+let selectedFile  = null;
+
+/* ── Build class list ─────────────────────── */
+const classList = document.getElementById('class-list');
+LABELS.forEach(label => {
+  const el = document.createElement('div');
+  el.className = 'class-item';
+  el.textContent = label.replace(/_/g, ' ');
+  el.dataset.label = label;
+  classList.appendChild(el);
+});
+
+/* ── Model buttons ────────────────────────── */
+document.querySelectorAll('.model-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedModel = btn.dataset.model;
+  });
+});
+
+/* ── File upload ──────────────────────────── */
+const fileInput   = document.getElementById('file-input');
+const uploadZone  = document.getElementById('upload-zone');
+const previewWrap = document.getElementById('preview-wrap');
+const previewImg  = document.getElementById('preview-img');
+const fileNameEl  = document.getElementById('file-name');
+
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('drag-over');
+});
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  selectedFile = file;
+  previewImg.src = URL.createObjectURL(file);
+  fileNameEl.textContent = file.name;
+  previewWrap.style.display = 'block';
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('nut-panel').style.display = 'none';
+  hideError();
+}
+
+/* ── Predict ──────────────────────────────── */
+document.getElementById('predict-btn').addEventListener('click', async () => {
+  if (!selectedFile) { showError('Please upload a food image first.'); return; }
+  hideError();
+  setLoading(true);
+
+  const fd = new FormData();
+  fd.append('image', selectedFile);
+  fd.append('model', selectedModel);
+
+  try {
+    const res  = await fetch('/predict', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Prediction failed');
+    renderResult(data);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    setLoading(false);
+  }
+});
+
+/* ── Render result ────────────────────────── */
+function renderResult(data) {
+  const rp = document.getElementById('result-panel');
+  rp.style.display = 'block';
+  rp.classList.remove('fade-in');
+  void rp.offsetWidth;
+  rp.classList.add('fade-in');
+
+  document.getElementById('result-label').textContent =
+    data.predicted_label.replace(/_/g, ' ').toUpperCase();
+  document.getElementById('result-model-tag').textContent =
+    '▸ ' + (data.model_used || selectedModel).toUpperCase().replace(/_/g, ' ');
+
+  const pct = Math.min(100, data.confidence || 0).toFixed(1);
+  document.getElementById('conf-pct').textContent = pct + '%';
+  setTimeout(() => {
+    document.getElementById('conf-bar').style.width = pct + '%';
+  }, 60);
+
+  const m = data.metrics || {};
+  setMetricCell('m-conf', m.confidence, '%');
+  setMetricCell('m-prec', m.precision,  '%');
+  setMetricCell('m-rec',  m.recall,     '%');
+  setMetricCell('m-f1',   m.f1_score,   '%');
+
+  document.querySelectorAll('.class-item').forEach(el => {
+    el.classList.toggle('highlighted', el.dataset.label === data.predicted_label);
+  });
+  const hl = classList.querySelector('.highlighted');
+  if (hl) hl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  renderNutrition(data.predicted_label, data.nutrition);
+
+  const top5El = document.getElementById('top5-list');
+  top5El.innerHTML = (data.top5 || []).map((item, i) => `
+    <div class="top5-row">
+      <span class="t5-rank">#${i + 1}</span>
+      <span class="t5-name">${item.label.replace(/_/g, ' ')}</span>
+      <div class="t5-bar-wrap">
+        <div class="t5-bar">
+          <div class="t5-bar-fill" style="width:${Math.min(100, item.confidence).toFixed(1)}%"></div>
+        </div>
+      </div>
+      <span class="t5-pct">${Math.min(100, item.confidence).toFixed(1)}%</span>
+    </div>
+  `).join('');
+
+  rp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function setMetricCell(id, val, unit) {
+  const el = document.getElementById(id);
+  if (val === undefined || val === null) { el.textContent = '—'; return; }
+  const v = parseFloat(val);
+  el.textContent = v.toFixed(1) + unit;
+  el.className = 'metric-val';
+  if (v >= 70) el.classList.add('high');
+  else if (v >= 40) el.classList.add('med');
+  else el.classList.add('low');
+}
+
+function renderNutrition(label, nut) {
+  const panel = document.getElementById('nut-panel');
+  const nameEl = document.getElementById('nut-food-name');
+  const contentEl = document.getElementById('nut-content');
+
+  nameEl.textContent = label.replace(/_/g, ' ');
+
+  if (nut && Object.keys(nut).length > 0) {
+    const tiles = [
+      { key: 'calories', label: 'Calories', cls: 'cal',  unit: 'kcal', full: true },
+      { key: 'protein',  label: 'Protein',  cls: 'pro',  unit: 'g' },
+      { key: 'carbs',    label: 'Carbs',    cls: 'carb', unit: 'g' },
+      { key: 'fats',     label: 'Fats',     cls: 'fat',  unit: 'g' },
+      { key: 'fiber',    label: 'Fiber',    cls: 'fib',  unit: 'g' },
+    ];
+    let html = '<div class="nut-grid">';
+    tiles.forEach(t => {
+      const val = nut[t.key];
+      if (val === undefined || val === null) return;
+      html += `
+        <div class="nut-tile${t.full ? ' full' : ''}">
+          <div class="nut-num ${t.cls}">${val}</div>
+          <div class="nut-name">${t.label}</div>
+          <div class="nut-unit">${t.unit}</div>
+        </div>`;
+    });
+    html += '</div>';
+    contentEl.innerHTML = html;
+  } else {
+    contentEl.innerHTML = `
+      <div class="nut-placeholder">
+        <div class="ph-icon">📭</div>
+        <p>No nutrition data in Redis for<br><strong style="color:var(--text)">${label.replace(/_/g,' ')}</strong></p>
+      </div>`;
+  }
+
+  panel.style.display = 'block';
+  panel.classList.remove('fade-in');
+  void panel.offsetWidth;
+  panel.classList.add('fade-in');
+}
+
+/* ── Utility ──────────────────────────────── */
+function setLoading(on) {
+  const btn     = document.getElementById('predict-btn');
+  const txt     = document.getElementById('btn-text');
+  const spinner = document.getElementById('btn-spinner');
+  btn.disabled  = on;
+  txt.style.display     = on ? 'none'  : 'inline';
+  spinner.classList.toggle('show', on);
+}
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+</script>
+</body>
+</html>
